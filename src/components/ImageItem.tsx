@@ -1,0 +1,104 @@
+import type { File } from "../types";
+import { type FC, memo, useState } from "react";
+import { View } from "react-native";
+import { Divider, IconButton, Menu, Text, TextInput } from "react-native-paper";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { handleAsync } from "../util";
+
+const ImageItem: FC<Props> = ({ name, isLast }) => {
+  const [isUpdate, setIsUpdate] = useState(false);
+  const [value, setValue] = useState("");
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <View
+        style={{
+          width: "100%",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginVertical: 5,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            flex: 1,
+            gap: 10,
+          }}
+        >
+          <MaterialIcons name="image" size={22} />
+          {isUpdate ? (
+            <TextInput value={value} />
+          ) : (
+            <Text variant="labelLarge">{name}</Text>
+          )}
+        </View>
+        {isUpdate ? (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <IconButton
+              icon={(props) => (
+                <MaterialIcons {...props} name="close" size={22} />
+              )}
+              onPress={async () => {
+                await handleAsync(() => {
+                  setIsUpdate(false);
+                  setValue("");
+                });
+              }}
+            />
+            <IconButton
+              icon={(props) => (
+                <MaterialIcons {...props} name="check" size={22} />
+              )}
+              onPress={async () => {
+                await handleAsync(() => {});
+              }}
+            />
+          </View>
+        ) : (
+          <Menu
+            visible={visible}
+            onDismiss={() => setVisible(false)}
+            anchor={
+              <IconButton
+                onPress={() => setVisible(true)}
+                icon={(props) => (
+                  <MaterialCommunityIcons
+                    {...props}
+                    name="dots-vertical"
+                    size={22}
+                  />
+                )}
+              />
+            }
+          >
+            <Menu.Item
+              title="Update"
+              onPress={async () => {
+                await handleAsync(() => {
+                  setVisible(false);
+                  setIsUpdate(true);
+                  setValue(name);
+                });
+              }}
+            />
+            <Menu.Item
+              title="Delete"
+              onPress={async () => {
+                await handleAsync(() => {});
+              }}
+            />
+          </Menu>
+        )}
+      </View>
+      {!isLast && <Divider />}
+    </>
+  );
+};
+
+type Props = { isLast: boolean } & File;
+
+export default memo(ImageItem);
