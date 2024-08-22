@@ -43,7 +43,7 @@ function ImagePicker() {
     >
       <Image
         source={{
-          uri: `${BASE_URL}/user/folders/0/files/${user!.image}`,
+          uri: `${BASE_URL}/user/files/${user!.image}`,
           headers: {
             [AUTHORIZATION]: jwt.bearer(),
           },

@@ -14,6 +14,10 @@ export default function App() {
         name={ROUTER.APP.SCREENS.FILE}
         component={require("./File").default}
       />
+      <Stack.Screen
+        name={ROUTER.APP.SCREENS.FOLDER}
+        component={require("./Folder").default}
+      />
     </Stack.Navigator>
   );
 }

@@ -10,6 +10,7 @@ export default {
     NAME: "App",
     SCREENS: {
       FILE: "File",
+      FOLDER: "Folder",
       MENU: {
         NAME: "Menu",
         SCREENS: {
