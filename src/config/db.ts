@@ -23,5 +23,5 @@ export async function close() {
 }
 
 export async function sync() {
-  await global.sequelize.sync({ force: true });
+  await global.sequelize.sync();
 }

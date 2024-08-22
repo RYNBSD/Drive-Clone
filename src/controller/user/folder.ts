@@ -34,20 +34,35 @@ export default {
         StatusCodes.INTERNAL_SERVER_ERROR,
         "folder undefined (user.folder.one)"
       );
-    const { File } = model;
-    const files = await File.findAll({
-      where: {
-        userId: req.user!.dataValues.id,
-        folderId: res.locals.folder.dataValues.id,
-      },
-      order: [["createdAt", "DESC"]],
-      transaction: req.transaction,
-    });
+    const { Folder, File } = model;
+    const [folders, files] = await Promise.all([
+      Folder.findAll({
+        where: {
+          userId: req.user!.dataValues.id,
+          folderId: res.locals.folder.dataValues.id,
+        },
+        order: [["createdAt", "DESC"]],
+        transaction: req.transaction,
+      }),
+      File.findAll({
+        where: {
+          userId: req.user!.dataValues.id,
+          folderId: res.locals.folder.dataValues.id,
+        },
+        order: [["createdAt", "DESC"]],
+        transaction: req.transaction,
+      }),
+    ]);
     res
-      .status(files.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK)
+      .status(
+        folders.length === 0 && files.length === 0
+          ? StatusCodes.NO_CONTENT
+          : StatusCodes.OK
+      )
       .json({
         success: true,
         data: {
+          folders: folders.map((folder) => folder.dataValues),
           files: files.map((file) => file.dataValues),
         },
       });

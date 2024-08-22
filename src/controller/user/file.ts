@@ -37,13 +37,7 @@ export default {
         StatusCodes.INTERNAL_SERVER_ERROR,
         "file undefined (user.folder.file.one)"
       );
-
-    const paths = FileUploader.merge({
-      userId: res.locals.file.dataValues.userId,
-      folderName: res.locals.folder ? res.locals.folder.dataValues.name : "",
-      fileName: res.locals.file.dataValues.name,
-    });
-    const stream = fs.createReadStream(paths[0]!);
+    const stream = fs.createReadStream(res.locals.file.dataValues.path);
     stream.on("error", (error) => {
       throw error;
     });

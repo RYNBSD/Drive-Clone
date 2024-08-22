@@ -97,7 +97,7 @@ export class FileUploader {
   ) {
     const filePath = path.join(folderPath, fileName);
     if (filePath.length === 0 || fs.existsSync(filePath)) return false;
-    await fs.promises.writeFile(folderPath, fileBuffer);
+    await fs.promises.writeFile(filePath, fileBuffer);
     return filePath;
   }
 
