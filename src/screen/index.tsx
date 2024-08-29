@@ -11,9 +11,15 @@ function Routes() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {user === null ? (
-        <Stack.Screen name={ROUTER.AUTH.NAME} component={require("./auth").default} />
+        <Stack.Screen
+          name={ROUTER.AUTH.NAME}
+          component={require("./auth").default}
+        />
       ) : (
-        <Stack.Screen name={ROUTER.APP.NAME} component={require("./app").default} />
+        <Stack.Screen
+          name={ROUTER.APP.NAME}
+          component={require("./app").default}
+        />
       )}
     </Stack.Navigator>
   );

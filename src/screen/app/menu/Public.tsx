@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function Folder() {
+export default function Public() {
   return (
     <View>
-      <Text>Folder</Text>
+      <Text>Public</Text>
     </View>
   )
 }

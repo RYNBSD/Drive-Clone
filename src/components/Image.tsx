@@ -2,7 +2,6 @@ import type { File } from "../types";
 import { type FC, memo, useState } from "react";
 import { View } from "react-native";
 import {
-  Divider,
   IconButton,
   Menu,
   Text,
@@ -12,7 +11,7 @@ import {
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { handleAsync } from "../util";
 
-const ImageItem: FC<Props> = ({ name, isLast }) => {
+const Image: FC<Props> = ({ name }) => {
   const [isUpdate, setIsUpdate] = useState(false);
   const [value, setValue] = useState("");
   const [visible, setVisible] = useState(false);
@@ -106,11 +105,10 @@ const ImageItem: FC<Props> = ({ name, isLast }) => {
           )}
         </View>
       </TouchableRipple>
-      {!isLast && <Divider />}
     </>
   );
 };
 
 type Props = { isLast: boolean } & File;
 
-export default memo(ImageItem);
+export default memo(Image);

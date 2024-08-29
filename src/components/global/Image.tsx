@@ -39,7 +39,10 @@ export const Image: ForwardRefRenderFunction<
             : source
         }
         onProgress={({ loaded, total }) => setProgress(loaded / total)}
-        onError={() => setIsError(true)}
+        onError={(error) => {
+          if (__DEV__) console.error(error);
+          setIsError(true);
+        }}
         onLoad={() => setIsLoaded(true)}
         style={{
           ...(rest?.style as object),

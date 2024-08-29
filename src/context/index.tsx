@@ -1,1 +1,2 @@
-export { useAuth, default as AuthProvider } from "./Auth";
+export { useAuth, default as AuthProvider } from "./auth";
+export { useAlert, default as AlertProvider } from "./alert";

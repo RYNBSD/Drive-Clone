@@ -11,6 +11,10 @@ export default function App() {
         component={require("./menu").default}
       />
       <Stack.Screen
+        name={ROUTER.APP.SCREENS.SEARCH.NAME}
+        component={require("./search").default}
+      />
+      <Stack.Screen
         name={ROUTER.APP.SCREENS.FILE}
         component={require("./File").default}
       />

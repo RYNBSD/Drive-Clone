@@ -12,6 +12,8 @@ import {
 } from "react-native-paper";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { handleAsync } from "../../util";
+import { useStackNavigation } from "../../hook";
+import { ROUTER } from "../../constant";
 
 function DirectoryItemIcon({
   isFolder,
@@ -56,7 +58,12 @@ function DirectoryItemName({
   );
 }
 
-function DirectoryItemUpdateActions({ state, setState }: StateProp) {
+function DirectoryItemUpdateActions({
+  id,
+  state,
+  setState,
+  update,
+}: Pick<Props, "id"> & Pick<Actions, "update"> & StateProp) {
   return (
     state.isUpdating && (
       <View style={{ flexDirection: "row" }}>
@@ -71,7 +78,12 @@ function DirectoryItemUpdateActions({ state, setState }: StateProp) {
         <IconButton
           icon={(props) => <MaterialIcons {...props} name="check" size={22} />}
           onPress={async () => {
-            await handleAsync(() => {});
+            await handleAsync(async () => {
+              const formData = new FormData();
+              formData.append("name", state.newName);
+              await update(id, formData);
+              setState((prev) => ({ ...prev, isUpdating: false, newName: "" }));
+            });
           }}
         />
       </View>
@@ -80,10 +92,12 @@ function DirectoryItemUpdateActions({ state, setState }: StateProp) {
 }
 
 function DirectoryItemMenu({
+  id,
   name,
   state,
   setState,
-}: Pick<Props, "name"> & StateProp) {
+  remove,
+}: Pick<Props, "name" | "id"> & Pick<Actions, "remove"> & StateProp) {
   return (
     !state.isUpdating && (
       <Menu
@@ -110,9 +124,7 @@ function DirectoryItemMenu({
         />
         <Menu.Item
           title="Delete"
-          onPress={async () => {
-            await handleAsync(() => {});
-          }}
+          onPress={() => handleAsync(() => remove(id))}
         />
       </Menu>
     )
@@ -132,7 +144,24 @@ type StateProp = {
   setState: StateAction;
 };
 
-const DirectoryItem: FC<Props> = ({ name, isFolder, isLast }) => {
+type UpdateFn = (id: number, body: FormData) => Promise<void>;
+
+type RemoveFn = (id: number) => Promise<void>;
+
+type Actions = {
+  update: UpdateFn;
+  remove: RemoveFn;
+};
+
+const DirectoryItem: FC<Props> = ({
+  id,
+  name,
+  isFolder,
+  isLast,
+  update,
+  remove,
+}) => {
+  const stackNavigation = useStackNavigation();
   const [state, setState] = useState<State>({
     isUpdating: false,
     openMenu: false,
@@ -145,6 +174,16 @@ const DirectoryItem: FC<Props> = ({ name, isFolder, isLast }) => {
         style={{
           width: "100%",
           marginVertical: 5,
+        }}
+        onPress={() => {
+          stackNavigation.push(ROUTER.APP.NAME, {
+            screen: isFolder
+              ? ROUTER.APP.SCREENS.FOLDER
+              : ROUTER.APP.SCREENS.FILE,
+            params: {
+              [isFolder ? "folderId" : "fileId"]: id,
+            },
+          });
         }}
       >
         <View
@@ -163,11 +202,26 @@ const DirectoryItem: FC<Props> = ({ name, isFolder, isLast }) => {
               gap: 10,
             }}
           >
-            <DirectoryItemIcon state={state} setState={setState} isFolder={isFolder} />
+            <DirectoryItemIcon
+              state={state}
+              setState={setState}
+              isFolder={isFolder}
+            />
             <DirectoryItemName state={state} setState={setState} name={name} />
           </View>
-          <DirectoryItemUpdateActions state={state} setState={setState} />
-          <DirectoryItemMenu state={state} setState={setState} name={name} />
+          <DirectoryItemUpdateActions
+            id={id}
+            state={state}
+            setState={setState}
+            update={update}
+          />
+          <DirectoryItemMenu
+            id={id}
+            state={state}
+            setState={setState}
+            name={name}
+            remove={remove}
+          />
         </View>
       </TouchableRipple>
       {!isLast && <Divider />}
@@ -175,6 +229,11 @@ const DirectoryItem: FC<Props> = ({ name, isFolder, isLast }) => {
   );
 };
 
-type Props = { isFolder: boolean; isLast: boolean } & File & Folder;
+type Props = {
+  isFolder: boolean;
+  isLast: boolean;
+} & File &
+  Folder &
+  Actions;
 
 export default memo(DirectoryItem);

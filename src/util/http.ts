@@ -26,3 +26,9 @@ export async function request(path: string, init?: RequestInit) {
   jwt.set(newToken.value);
   return response;
 }
+
+export function object2urlQuery(obj: object) {
+  return Object.entries(obj)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&");
+}

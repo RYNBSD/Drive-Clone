@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../../../context";
 import { Appbar, Menu } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { useStackNavigation } from "../../../hook";
 import { handleAsync } from "../../../util";
+import { useAuth } from "../../../context";
+import { ROUTER } from "../../../constant";
 
-function HeaderAppBar() {
+function MenuAppBar() {
   const safeAreaInsets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const { signOut } = useAuth()!;
@@ -42,10 +44,15 @@ function HeaderAppBar() {
 }
 
 export default function MenuHeader() {
+  const stackNavigation = useStackNavigation();
   return (
     <Appbar.Header>
       <Appbar.Content title="Drive" />
-      <HeaderAppBar />
+      <Appbar.Action
+        icon={(props) => <MaterialIcons {...props} name="search" />}
+        onPress={() => stackNavigation.navigate(ROUTER.APP.SCREENS.SEARCH.NAME)}
+      />
+      <MenuAppBar />
     </Appbar.Header>
   );
 }

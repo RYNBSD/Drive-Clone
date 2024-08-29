@@ -11,19 +11,19 @@ export default {
     SCREENS: {
       FILE: "File",
       FOLDER: "Folder",
+      SEARCH: {
+        NAME: "Search",
+        SCREENS: {
+          LOCALE: "Locale",
+          GLOBAL: "Global",
+        },
+      },
       MENU: {
         NAME: "Menu",
         SCREENS: {
           HOME: "Home",
           STARRED: "Starred",
-          FILES: {
-            NAME: "Files",
-            SCREENS: {
-              ALL: "All",
-              FOLDER: "Folder",
-              FILE: "File"
-            },
-          },
+          PUBLIC: "Public",
           PROFILE: "Profile",
         },
       },

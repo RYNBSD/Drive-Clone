@@ -9,7 +9,8 @@ export type User = {
 export type Folder = {
   id: number;
   name: string;
-  isStared: boolean;
+  isStarred: boolean;
+  isPublic: boolean;
   userId: number;
 };
 
@@ -18,7 +19,8 @@ export type FileType = "image" | "video" | "audio" | "pdf" | "none";
 export type File = {
   id: number;
   name: string;
-  isStared: boolean;
+  isStarred: boolean;
+  isPublic: boolean;
   mime?: string;
   type: FileType;
   userId: number;

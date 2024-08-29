@@ -1,6 +1,6 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
 import { MaterialIcons } from "@expo/vector-icons";
-import { MenuFooter, MenuHeader } from "../../../components/app/menu";
+import { MenuHeader } from "../../../components/app/menu";
 import { ROUTER } from "../../../constant";
 
 const BottomTab = createMaterialBottomTabNavigator();
@@ -29,11 +29,11 @@ export default function Menu() {
           }}
         />
         <BottomTab.Screen
-          name={ROUTER.APP.SCREENS.MENU.SCREENS.FILES.NAME}
-          component={require("./Files").default}
+          name={ROUTER.APP.SCREENS.MENU.SCREENS.PUBLIC}
+          component={require("./Public").default}
           options={{
             tabBarIcon: (props) => (
-              <MaterialIcons {...props} name="folder" size={24} />
+              <MaterialIcons {...props} name="public" size={24} />
             ),
           }}
         />
@@ -47,8 +47,6 @@ export default function Menu() {
           }}
         />
       </BottomTab.Navigator>
-      <MenuFooter />
     </>
   );
 }
-

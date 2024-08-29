@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { handleAsync, request } from "../util";
 
@@ -10,7 +10,23 @@ export function useFetch(
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<unknown>(null);
+
+  const fetch = useCallback(
+    async (controller?: AbortController) => {
+      const res = await request(path, { ...init, signal: controller?.signal });
+      switch (res.ok) {
+        case true:
+          setIsSuccess(true);
+          break;
+        default:
+          setIsFailed(true);
+      }
+      await callback(res);
+    },
+    [callback, init, path]
+  );
 
   useEffectOnce(() => {
     const controller = new AbortController();
@@ -18,9 +34,7 @@ export function useFetch(
     handleAsync(
       async () => {
         setIsLoading(true);
-        const res = await request(path, { ...init, signal: controller.signal });
-        if (!res.ok) setIsFailed(true);
-        await callback(res);
+        await fetch(controller);
       },
       null,
       (error) => {
@@ -38,8 +52,10 @@ export function useFetch(
 
   return {
     isLoading,
+    isSuccess,
     isFailed,
     isError,
     error,
+    refetch: fetch,
   };
 }
