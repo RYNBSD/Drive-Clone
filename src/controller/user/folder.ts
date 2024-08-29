@@ -7,7 +7,7 @@ import { util } from "../../util/index.js";
 import { model } from "../../model/index.js";
 import { FileUploader } from "../../lib/index.js";
 
-const { Create, Update } = schema.req.user.folder;
+const { Flags, Create, Update } = schema.req.user.folder;
 
 export default {
   async all(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
@@ -32,7 +32,7 @@ export default {
     if (typeof res.locals.folder === "undefined")
       throw APIError.server(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "folder undefined (user.folder.one)"
+        "folder undefined (controller.user.folder.one)"
       );
     const { Folder, File } = model;
     const [folders, files] = await Promise.all([
@@ -67,6 +67,147 @@ export default {
         },
       });
   },
+  async starred(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const { Folder } = model;
+    const folders = await Folder.findAll({
+      where: {
+        userId: req.user!.dataValues.id,
+        isStarred: true,
+      },
+      order: [["createdAt", "DESC"]],
+      transaction: req.transaction,
+    });
+    res
+      .status(folders.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK)
+      .json({
+        success: true,
+        data: {
+          folders: folders.map((folder) => folder.dataValues),
+        },
+      });
+  },
+  async public(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const { Folder } = model;
+    const folders = await Folder.findAll({
+      where: {
+        userId: req.user!.dataValues.id,
+        isPublic: true,
+      },
+      order: [["createdAt", "DESC"]],
+      transaction: req.transaction,
+    });
+    res
+      .status(folders.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK)
+      .json({
+        success: true,
+        data: {
+          folders: folders.map((folder) => folder.dataValues),
+        },
+      });
+  },
+  async folders(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    if (typeof res.locals.folder === "undefined")
+      throw APIError.server(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "folder undefined (controller.user.folder.folders)"
+      );
+    const { Folder } = model;
+    const folders = await Folder.findAll({
+      where: {
+        userId: req.user!.dataValues.id,
+        folderId: res.locals.folder.dataValues.id,
+      },
+      order: [["createdAt", "DESC"]],
+      transaction: req.transaction,
+    });
+    res
+      .status(folders.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK)
+      .json({
+        success: true,
+        data: {
+          folders: folders.map((folder) => folder.dataValues),
+        },
+      });
+  },
+  async files(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    if (typeof res.locals.folder === "undefined")
+      throw APIError.server(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "folder undefined (controller.user.folder.files)"
+      );
+    const { File } = model;
+    const files = await File.findAll({
+      where: {
+        userId: req.user!.dataValues.id,
+        folderId: res.locals.folder.dataValues.id,
+      },
+      order: [["createdAt", "DESC"]],
+      transaction: req.transaction,
+    });
+    res
+      .status(files.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK)
+      .json({
+        success: true,
+        data: {
+          files: files.map((file) => file.dataValues),
+        },
+      });
+  },
+  async info(_req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    if (typeof res.locals.folder === "undefined")
+      throw APIError.server(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "folder undefined (controller.user.folder.info)"
+      );
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        folder: res.locals.folder.dataValues,
+      },
+    });
+  },
+  async flags(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    if (typeof res.locals.folder === "undefined")
+      throw APIError.server(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "folder undefined (controller.user.folder.flags)"
+      );
+
+    const { Body } = Flags;
+    const parsedBody = Body.safeParse(req.body);
+    if (!parsedBody.success)
+      throw APIError.controller(
+        StatusCodes.NOT_ACCEPTABLE,
+        "Invalid request body"
+      );
+
+    const {
+      isPublic = res.locals.folder.dataValues.isPublic,
+      isStarred = res.locals.folder.dataValues.isStarred,
+    } = parsedBody.data;
+
+    if (
+      isPublic === res.locals.folder.dataValues.isPublic &&
+      isStarred === res.locals.folder.dataValues.isStarred
+    )
+      throw APIError.controller(StatusCodes.FORBIDDEN, "Nothing changed");
+
+    await res.locals.folder.update(
+      { isStarred, isPublic },
+      {
+        fields: ["isPublic", "isStarred"],
+        transaction: req.transaction,
+        returning: false,
+      }
+    );
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        folder: res.locals.folder.dataValues,
+      },
+    });
+  },
   async create(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     const { Body } = Create;
     const parsedBody = Body.safeParse(req.body);
@@ -89,18 +230,21 @@ export default {
 
     const { Folder, File } = model;
 
-    const checkParentFolder = await Folder.findOne({
-      where: { userId: req.user!.dataValues.id, id: folderId },
-      limit: 1,
-      plain: true,
-      transaction: req.transaction,
-    });
+    let isRootFolder = true;
+    let parentFolderPath = req.user!.dataValues.path;
 
-    const isRootFolder = checkParentFolder === null;
-    const parentFolderPath =
-      checkParentFolder === null
-        ? req.user!.dataValues.path
-        : checkParentFolder.dataValues.path;
+    if (folderId > 0) {
+      const checkParentFolder = await Folder.findOne({
+        where: { userId: req.user!.dataValues.id, id: folderId },
+        limit: 1,
+        plain: true,
+        transaction: req.transaction,
+      });
+      if (checkParentFolder === null)
+        throw APIError.controller(StatusCodes.NOT_FOUND, "Folder not found");
+      isRootFolder = false;
+      parentFolderPath = checkParentFolder.dataValues.path;
+    }
 
     const [checkDuplicateFolder, checkDuplicateFile] = await Promise.all([
       Folder.findOne({
@@ -136,23 +280,26 @@ export default {
       parentFolderPath,
       parsedFolderName
     );
-    if (savedFolder === false)
-      throw APIError.server(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        "File system and db are not sync"
-      );
+    if (!savedFolder.success) {
+      if (savedFolder.sever)
+        throw APIError.server(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `${savedFolder.raison} (controller.user.folder.create)`
+        );
+      throw APIError.controller(StatusCodes.BAD_REQUEST, savedFolder.raison);
+    }
 
     const createdFolder = await Folder.create(
       {
         name: parsedFolderName,
-        isStared: false,
+        isStarred: false,
         isPublic: false,
         folderId: isRootFolder ? null : folderId,
         userId: req.user!.dataValues.id,
-        path: savedFolder,
+        path: savedFolder.payload,
       },
       {
-        fields: ["name", "isStared", "isPublic", "userId", "folderId", "path"],
+        fields: ["name", "isStarred", "isPublic", "userId", "folderId", "path"],
         transaction: req.transaction,
       }
     );
@@ -213,7 +360,11 @@ export default {
         "Invalid request body"
       );
 
-    const { name, isStared = false, isPublic = false } = parsedBody.data;
+    const {
+      name,
+      isStarred = res.locals.folder.dataValues.isStarred,
+      isPublic = res.locals.folder.dataValues.isPublic,
+    } = parsedBody.data;
     if (name.length === 0)
       throw APIError.controller(StatusCodes.BAD_REQUEST, "empty name");
 
@@ -224,50 +375,70 @@ export default {
     if (!file.isFolderNameSafe(name))
       throw APIError.controller(StatusCodes.FORBIDDEN, "Unsafe folder name");
 
-    const { Folder } = model;
-    const checkFolder = await Folder.findOne({
-      where: {
-        userId: req.user!.dataValues.id,
-        name: parsedFolderName,
-      },
-      limit: 1,
-      plain: true,
-      transaction: req.transaction,
-    });
-    if (checkFolder !== null)
-      throw APIError.controller(StatusCodes.CONFLICT, "Duplicate folder name");
+    let newPath = res.locals.folder.dataValues.path;
 
-    let parentFolderPath = req.user!.dataValues.path;
-    if (res.locals.folder.dataValues.folderId !== null) {
-      const parentFolder = await Folder.findOne({
-        attributes: ["path"],
+    if (res.locals.folder.dataValues.name !== parsedFolderName) {
+      const { Folder } = model;
+      const checkFolder = await Folder.findOne({
+        attributes: ["id"],
         where: {
           userId: req.user!.dataValues.id,
-          id: res.locals.folder.dataValues.folderId,
+          name: parsedFolderName,
         },
         limit: 1,
         plain: true,
         transaction: req.transaction,
       });
-      if (parentFolder !== null)
-        parentFolderPath = parentFolder.dataValues.path;
+      if (checkFolder !== null)
+        throw APIError.controller(
+          StatusCodes.CONFLICT,
+          "Duplicate folder name"
+        );
+
+      let parentFolderPath = req.user!.dataValues.path;
+      if (res.locals.folder.dataValues.folderId !== null) {
+        const parentFolder = await Folder.findOne({
+          attributes: ["path"],
+          where: {
+            userId: req.user!.dataValues.id,
+            id: res.locals.folder.dataValues.folderId,
+          },
+          limit: 1,
+          plain: true,
+          transaction: req.transaction,
+        });
+        if (parentFolder !== null)
+          parentFolderPath = parentFolder.dataValues.path;
+      }
+
+      const newFolderPath = await FileUploader.renameFolder(
+        res.locals.folder.dataValues.path,
+        parentFolderPath,
+        parsedFolderName
+      );
+      if (!newFolderPath.success) {
+        if (newFolderPath.sever)
+          throw APIError.server(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `${newFolderPath.raison} (controller.user.folder.update)`
+          );
+        throw APIError.controller(
+          StatusCodes.BAD_REQUEST,
+          newFolderPath.raison
+        );
+      }
+      newPath = newFolderPath.payload;
     }
 
-    const newFolderPath = await FileUploader.renameFolder(
-      res.locals.folder.dataValues.path,
-      parentFolderPath,
-      parsedFolderName
-    );
-    if (newFolderPath === false)
-      throw APIError.server(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        "Can't rename folder (controller.user.folder.update)"
-      );
-
     await res.locals.folder.update(
-      { name: parsedFolderName, isStared, isPublic, path: newFolderPath },
       {
-        fields: ["name", "isStared", "isPublic", "path"],
+        name: parsedFolderName,
+        isStarred,
+        isPublic,
+        path: newPath,
+      },
+      {
+        fields: ["name", "isStarred", "isPublic", "path"],
         transaction: req.transaction,
         returning: false,
       }
@@ -281,7 +452,7 @@ export default {
     if (typeof res.locals.folder === "undefined")
       throw APIError.server(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "folder undefined (user.folder.remove)"
+        "folder undefined (controller.user.folder.remove)"
       );
     await res.locals.folder.destroy({
       force: true,

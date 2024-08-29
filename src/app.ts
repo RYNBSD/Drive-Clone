@@ -15,17 +15,18 @@ import morgan from "morgan";
 import useragent from "express-useragent";
 import session from "express-session";
 import requestIp from "request-ip";
-import passport from "./passport/index.js";
 import { StatusCodes } from "http-status-codes";
+import passport from "./passport/index.js";
 import { router } from "./router/index.js";
 import { BaseError } from "./error/index.js";
+import { config } from "./config/index.js";
 
 const app = express();
-app.set("trust proxy", 1)
+app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.enable("view cache");
 app.enable("json escape");
-app.enable("etag")
+app.enable("etag");
 
 /* Entry */
 app.use(timeout(6000 * 5)); // 5 minute
@@ -43,6 +44,8 @@ app.use((req, res, next) => {
     message: "Bot are not allowed",
   });
 });
+
+const { swagger } = config;
 
 /* Config */
 app.use(express.urlencoded({ extended: true }));
@@ -71,6 +74,9 @@ app.use(passport.session());
 app.use(requestIp.mw());
 
 app.use("/", router);
+
+const docs = swagger.init();
+app.use("/docs", docs.serve, docs.ui);
 
 app.all("*", async (_req, res) =>
   res.status(StatusCodes.NOT_FOUND).json({ success: false })
@@ -102,11 +108,11 @@ app.use(
         message = "Server error";
       }
     } else {
-      status = StatusCodes.INTERNAL_SERVER_ERROR
+      status = StatusCodes.INTERNAL_SERVER_ERROR;
       message = "Server Error";
     }
 
-    await BaseError.handleError(error)
+    await BaseError.handleError(error);
     res.status(status).json({ success: false, message });
   }
 );

@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { MulterError } from "multer";
 import { getReasonPhrase, StatusCodes, ReasonPhrases } from "http-status-codes";
+import { KEYS } from "../constant/index.js";
 
 export class BaseError extends Error {
   public readonly isOperational: boolean;

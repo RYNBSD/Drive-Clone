@@ -11,7 +11,7 @@ import { model } from "../../model/index.js";
 import { util } from "../../util/index.js";
 import file from "./file.js";
 
-const { Search, Update } = schema.req.user;
+const { Search, Recent, Update } = schema.req.user;
 
 export default {
   async search(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
@@ -20,41 +20,76 @@ export default {
     if (!parsedQuery.success)
       throw APIError.controller(
         StatusCodes.NOT_ACCEPTABLE,
-        "Invalid request query schema"
+        "Invalid request query"
       );
 
-    const { q } = parsedQuery.data;
+    const {
+      q,
+      mode,
+      lastFolderId = null,
+      lastFileId = null,
+      limit = 25,
+    } = parsedQuery.data;
     if (q.length === 0)
       throw APIError.controller(
         StatusCodes.FORBIDDEN,
         "No search query provided"
+      );
+    if (lastFileId !== null && lastFileId < 0)
+      throw APIError.controller(
+        StatusCodes.FORBIDDEN,
+        "last file id must be greater than -1"
+      );
+    if (lastFolderId !== null && lastFolderId < 0)
+      throw APIError.controller(
+        StatusCodes.FORBIDDEN,
+        "last folder id must be greater than -1"
       );
 
     const filteredQuery = q
       .split(/\s/g)
       .filter((query) => query.length > 1)
       .map((key) => ({ [Op.iLike]: `%${key}%` }));
-    const { Folder, File } = model;
+    if (filteredQuery.length === 0)
+      throw APIError.controller(
+        StatusCodes.NOT_ACCEPTABLE,
+        "Invalid search query"
+      );
 
+    const { Folder, File } = model;
     const [folders, files] = await Promise.all([
       Folder.findAll({
         where: {
-          userId: req.user!.dataValues.id,
+          id: {
+            [Op.lt]: lastFolderId ?? 0,
+          },
+          userId: {
+            [mode === "global" ? Op.ne : Op.eq]: req.user!.dataValues.id,
+          },
           name: {
             [Op.or]: filteredQuery,
           },
+          isPublic: mode === "global",
         },
         order: [["createdAt", "DESC"]],
+        limit: lastFolderId === null ? 0 : limit,
         transaction: req.transaction,
       }),
       File.findAll({
         where: {
-          userId: req.user!.dataValues.id,
+          id: {
+            [Op.lt]: lastFileId ?? 0,
+          },
+          userId: {
+            [mode === "global" ? Op.ne : Op.eq]: req.user!.dataValues.id,
+          },
           name: {
             [Op.or]: filteredQuery,
           },
+          isPublic: mode === "global",
         },
         order: [["createdAt", "DESC"]],
+        limit: lastFileId === null ? 0 : limit,
         transaction: req.transaction,
       }),
     ]);
@@ -74,22 +109,52 @@ export default {
       });
   },
   async recent(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
-    const { Folder, File } = model;
+    const { Query } = Recent;
+    const parsedQuery = Query.safeParse(req.query);
+    if (!parsedQuery.success)
+      throw APIError.controller(
+        StatusCodes.NOT_ACCEPTABLE,
+        "Invalid request query"
+      );
 
+    const {
+      lastFolderId = null,
+      lastFileId = null,
+      limit = 25,
+    } = parsedQuery.data;
+    if (lastFileId !== null && lastFileId < 0)
+      throw APIError.controller(
+        StatusCodes.FORBIDDEN,
+        "last file id must be greater than -1"
+      );
+    if (lastFolderId !== null && lastFolderId < 0)
+      throw APIError.controller(
+        StatusCodes.FORBIDDEN,
+        "last folder id must be greater than -1"
+      );
+
+    const { Folder, File } = model;
     const [folders, files] = await Promise.all([
       Folder.findAll({
         where: {
+          id: {
+            [Op.lt]: lastFolderId ?? 0,
+          },
           userId: req.user!.dataValues.id,
         },
         order: [["createdAt", "DESC"]],
+        limit: lastFolderId === null ? 0 : limit,
         transaction: req.transaction,
       }),
       File.findAll({
         where: {
-          folderId: null,
+          id: {
+            [Op.lt]: lastFileId ?? 0,
+          },
           userId: req.user!.dataValues.id,
         },
         order: [["createdAt", "DESC"]],
+        limit: lastFileId === null ? 0 : limit,
         transaction: req.transaction,
       }),
     ]);
@@ -146,11 +211,14 @@ export default {
         FileFilter.mime(image.buffer),
       ]);
 
-      if (savedFile === false)
-        throw APIError.controller(
-          StatusCodes.CONFLICT,
-          "File name already exist"
-        );
+      if (!savedFile.success) {
+        if (savedFile.sever)
+          throw APIError.server(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `${savedFile.raison} (controller.user.update)`
+          );
+        throw APIError.controller(StatusCodes.BAD_REQUEST, savedFile.raison);
+      }
 
       const { File } = model;
       const createdFile = await File.create(
@@ -159,9 +227,9 @@ export default {
           name: parsedImageName,
           type: "image",
           mime: mime ?? null,
-          path: savedFile,
+          path: savedFile.payload,
           folderId: null,
-          isStared: false,
+          isStarred: false,
           isPublic: false,
         },
         {
@@ -172,7 +240,7 @@ export default {
             "mime",
             "path",
             "folderId",
-            "isStared",
+            "isStarred",
             "isPublic",
           ],
           transaction: req.transaction,

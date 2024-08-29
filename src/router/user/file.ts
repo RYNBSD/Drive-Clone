@@ -11,11 +11,38 @@ const { upload } = config;
 const { handleAsync } = util.fn;
 const { PARAMS } = KEYS.HTTP.REQUEST;
 const { isFileOwner } = middleware.user;
-const { all, one, create, update, remove } = controller.user.file;
+const {
+  all,
+  one,
+  starred,
+  public: publicFiles,
+  info,
+  flags,
+  create,
+  update,
+  remove,
+} = controller.user.file;
 
 file.get("/", handleAsync(all));
 
+file.get(`/starred`, handleAsync(starred));
+
+file.get(`/public`, handleAsync(publicFiles));
+
 file.get(`/:${PARAMS.ID.FILE}`, handleAsync(isFileOwner), handleAsync(one));
+
+file.get(
+  `/:${PARAMS.ID.FILE}/info`,
+  handleAsync(isFileOwner),
+  handleAsync(info)
+);
+
+file.patch(
+  `/:${PARAMS.ID.FILE}`,
+  handleAsync(isFileOwner),
+  handleAsync(upload.none()),
+  handleAsync(flags)
+);
 
 file.post("/", handleAsync(upload.array("files")), handleAsync(create));
 

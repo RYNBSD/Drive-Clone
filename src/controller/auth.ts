@@ -72,31 +72,37 @@ export default {
     const rootPath = await FileUploader.createRootFolder(
       createdUser.dataValues.id
     );
-    if (rootPath === false)
-      throw APIError.controller(
-        StatusCodes.CONFLICT,
-        "Root directory already exists"
-      );
+    if (!rootPath.success) {
+      if (rootPath.sever)
+        throw APIError.server(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `${rootPath.raison} (controller.auth.signUp)`
+        );
+      throw APIError.controller(StatusCodes.BAD_REQUEST, rootPath.raison);
+    }
 
     const imagePath = await FileUploader.createFile(
-      rootPath,
+      rootPath.payload,
       parsedImageName,
       image.buffer
     );
-    if (imagePath === false)
-      throw APIError.controller(
-        StatusCodes.CONFLICT,
-        "File name already exists"
-      );
+    if (!imagePath.success) {
+      if (imagePath.sever)
+        throw APIError.server(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `${imagePath.raison} (controller.auth.signUp)`
+        );
+      throw APIError.controller(StatusCodes.BAD_REQUEST, imagePath.raison);
+    }
 
     const createdFile = await File.create(
       {
         name: parsedImageName,
         mime: (await FileFilter.mime(image.buffer))!,
         type: "image",
-        isStared: false,
+        isStarred: false,
         isPublic: false,
-        path: imagePath,
+        path: imagePath.payload,
         userId: createdUser.dataValues.id,
         folderId: null,
       },
@@ -105,7 +111,7 @@ export default {
           "name",
           "mime",
           "type",
-          "isStared",
+          "isStarred",
           "isPublic",
           "path",
           "userId",
@@ -114,8 +120,9 @@ export default {
         transaction: req.transaction,
       }
     );
+
     await createdUser.update(
-      { image: createdFile.dataValues.id, path: rootPath },
+      { image: createdFile.dataValues.id, path: rootPath.payload },
       {
         fields: ["image", "path"],
         transaction: req.transaction,

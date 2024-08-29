@@ -25,7 +25,7 @@ export const File = sequelize.define<Tables["File"]>(
       type: DataTypes.ENUM(...ENUM.FILE_TYPE),
       allowNull: false,
     },
-    isStared: {
+    isStarred: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,

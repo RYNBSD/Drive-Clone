@@ -19,7 +19,7 @@ export const User = z
 export const Folder = z
   .object({
     name: z.string(),
-    isStared: z.boolean(),
+    isStarred: z.boolean(),
     isPublic: z.boolean(),
     path: z.string(),
   })
@@ -32,7 +32,7 @@ export const File = z
     name: z.string(),
     mime: z.string().nullable(),
     type: z.enum(ENUM.FILE_TYPE),
-    isStared: z.boolean(),
+    isStarred: z.boolean(),
     isPublic: z.boolean(),
     path: z.string(),
   })

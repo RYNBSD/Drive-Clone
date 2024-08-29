@@ -2,6 +2,12 @@ import { z } from "zod";
 import file from "./file.js";
 
 export default {
+  Flags: {
+    Body: z.object({
+      isStarred: z.coerce.boolean().optional(),
+      isPublic: z.coerce.boolean().optional(),
+    }),
+  },
   Create: {
     Body: z.object({
       name: z.string().trim(),
@@ -11,7 +17,7 @@ export default {
   Update: {
     Body: z.object({
       name: z.string().trim(),
-      isStared: z.coerce.boolean().optional(),
+      isStarred: z.coerce.boolean().optional(),
       isPublic: z.coerce.boolean().optional(),
     }),
   },

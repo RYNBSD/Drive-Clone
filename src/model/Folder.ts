@@ -15,7 +15,7 @@ export const Folder = sequelize.define<Tables["Folder"]>(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    isStared: {
+    isStarred: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
